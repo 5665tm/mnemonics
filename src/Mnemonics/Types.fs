@@ -7,6 +7,7 @@ type Expression =
   | Constant of string * string // constant, has a default value
   | Scope of Expression list // curly-brace-delimited scope
   | DefaultValue // default value, taken from type enumeration
+  | DefaultVariable of Expression // default value, taken from type enumeration
 
 let space = Text " "
 let endConstant = Constant ("END", "")

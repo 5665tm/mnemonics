@@ -27,7 +27,11 @@ public partial class TemplatesExport {
     private TemplatesExportTemplate[] templateField;
     
     private string familyField;
-    
+
+	public static void TestingMethod()
+	{
+	}
+
     /// <remarks/>
     [System.Xml.Serialization.XmlElementAttribute("Template")]
     public TemplatesExportTemplate[] Template {
@@ -58,7 +62,7 @@ public partial class TemplatesExport {
 [System.ComponentModel.DesignerCategoryAttribute("code")]
 [System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true)]
 public partial class TemplatesExportTemplate {
-    
+
     private TemplatesExportTemplateContext contextField;
     
     private object categoriesField;
@@ -130,7 +134,7 @@ public partial class TemplatesExportTemplate {
             this.uidField = value;
         }
     }
-    
+
     /// <remarks/>
     [System.Xml.Serialization.XmlAttributeAttribute()]
     public string shortcut {
