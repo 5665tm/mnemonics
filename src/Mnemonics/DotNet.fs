@@ -4,7 +4,7 @@ open Types
 
 let dotNetGenericTypes =
   [
-    ("li", "System.Collections.Generic.List", 1)
+    ("l", "System.Collections.Generic.List", 1)
     (*"hi",  "System.Collections.Generic.HashSet", 1*)
     (*"di", "System.Collections.Generic.Dictionary", 2*)
     (*"~",  "System.Collections.Generic.IEnumerable", 1*)

@@ -28,10 +28,6 @@ public partial class TemplatesExport {
     
     private string familyField;
 
-	public static void TestingMethod()
-	{
-	}
-
     /// <remarks/>
     [System.Xml.Serialization.XmlElementAttribute("Template")]
     public TemplatesExportTemplate[] Template {

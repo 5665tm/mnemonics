@@ -1,20 +1,27 @@
-﻿open System
-open System.Collections.Generic
-open System.IO
-open System.Linq
-open System.Text
-open System.Xml.Serialization
-open Ionic.Zip
-open Types
-open DotNet
-open CSharp
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Xml.Serialization;
+using Ionic.Zip;
+using Types;
+using DotNet;
+using CSharp;
 
-let version = "0.5"
+namespace ExlainSoftware
+{
+	static class Generator
+	{
+		private static string _version = "0.5";
 
+/*
 type StringBuilder with
   member x.AppendString (s:string) = ignore <| x.Append s
   member x.AppendStrings (ss:string list) =
     for s in ss do ignore <| x.Append s
+
 
 let rec pairs l = seq {
   for a in l do
@@ -22,13 +29,18 @@ let rec pairs l = seq {
       yield (a,b)
   }
 
-let newGuid() = Guid.NewGuid().ToString().ToLower()
+*/
 
-/// Renders an XML template for C#, VB.NET and F#
-let renderReSharper() =
-  let te = new TemplatesExport(family = "Live Templates")
-  let templates = new List<TemplatesExportTemplate>()
+		private static string NewGuid()
+		{
+			return Guid.NewGuid().ToString().ToLower();
+		}
 
+		private static void RenderResharper()
+		{
+			var te = new TemplatesExport(){family =  "Live Templates"};
+			var templates = new List<TemplatesExportTemplate>();
+/*
   // debugging switches :)
   let renderCSharp = true
 
@@ -162,16 +174,21 @@ let renderReSharper() =
   
   te.Template <- templates.ToArray()
 
-  let filename = "ReSharperMnemonics.xml"
-  File.Delete(filename)
-  let xs = new XmlSerializer(te.GetType())
-  use fs = new FileStream(filename, FileMode.Create, FileAccess.Write)
-  xs.Serialize(fs, te)
+			*/
+			const string FILENAME = "ReSharperMnemonics.xml";
+			File.Delete(FILENAME);
+			var xs = new XmlSerializer(te.GetType());
+			using (var fs = new FileStream(FILENAME, FileMode.Create, FileAccess.Write))
+			{
+				xs.Serialize(fs, te);
+			}
+			Console.WriteLine(te.Template.Length + "ReSharper templates exported");
+		}
 
-  printfn "%A ReSharper templates exported" (te.Template.Length)
-
-[<EntryPoint>]
-let main argv = 
-    renderReSharper()
-    Console.ReadKey() |> ignore
-    0
+		static void Main()
+		{
+			RenderResharper();
+			Thread.Sleep(1000);
+		}
+	}
+}

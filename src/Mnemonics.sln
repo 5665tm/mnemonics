@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+VisualStudioVersion = 12.0.30501.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Mnemonics", "Mnemonics\Mnemonics.fsproj", "{910D73F5-75BA-47AA-BAAD-4434687D1E9B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mnemonics.XML", "Mnemonics.XML\Mnemonics.XML.csproj", "{384EBCF4-BD1E-40E8-8CDF-B635E411DF03}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Generator", "Generator\Generator.csproj", "{96BD982B-7F7E-4E7E-AC48-63BE7CC59391}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{384EBCF4-BD1E-40E8-8CDF-B635E411DF03}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{384EBCF4-BD1E-40E8-8CDF-B635E411DF03}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{384EBCF4-BD1E-40E8-8CDF-B635E411DF03}.Release|Any CPU.Build.0 = Release|Any CPU
+		{96BD982B-7F7E-4E7E-AC48-63BE7CC59391}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96BD982B-7F7E-4E7E-AC48-63BE7CC59391}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96BD982B-7F7E-4E7E-AC48-63BE7CC59391}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96BD982B-7F7E-4E7E-AC48-63BE7CC59391}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
