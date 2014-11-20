@@ -1,194 +1,234 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿// Last Change: 2014 11 21 12:55 AM
+
+using System;
 using System.Text;
-using System.Threading;
-using System.Xml.Serialization;
-using Ionic.Zip;
-using Types;
-using DotNet;
-using CSharp;
 
 namespace ExlainSoftware
 {
-	static class Generator
+	internal static class Generator
 	{
-		private static string _version = "0.5";
-
-/*
-type StringBuilder with
-  member x.AppendString (s:string) = ignore <| x.Append s
-  member x.AppendStrings (ss:string list) =
-    for s in ss do ignore <| x.Append s
-
-
-let rec pairs l = seq {
-  for a in l do
-    for b in l do 
-      yield (a,b)
-  }
-
-*/
-
-		private static string NewGuid()
+		private static void Render()
 		{
-			return Guid.NewGuid().ToString().ToLower();
+			var sb = new StringBuilder();
+			sb.Append(SimpleVariable.GenerateTemplates("i", "int", "0"));
 		}
 
-		private static void RenderResharper()
+		private static void Main()
 		{
-			var te = new TemplatesExport(){family =  "Live Templates"};
-			var templates = new List<TemplatesExportTemplate>();
-/*
-  // debugging switches :)
-  let renderCSharp = true
+			Render();
+			Console.ReadLine();
+		}
+	}
 
-  let printExpressions expressions (vars:List<TemplatesExportTemplateVariable>) defValue =
-    let rec impl exps (builder:StringBuilder) =
-      match exps with
-      | Text(txt) :: t ->
-        builder.AppendString txt
-        impl t builder
+	/// <summary>
+	///     Базовый класс для всех шаблонов
+	/// </summary>
+	public abstract class BaseTemplate
+	{
+		/// <summary>
+		///     Идентификатор шаблона
+		/// </summary>
+		public string Uid { get; private set; }
 
-      | DefaultValue :: t ->
-        builder.AppendString defValue
-        impl t builder
+		/// <summary>
+		/// Выражение для вычисления имени по умолчанию
+		/// </summary>
+		public string DefaultNameExpression { get; private set; }
 
-      | DefaultVariable(content) :: t ->
-        let v = new TemplatesExportTemplateVariable()
-        Console.WriteLine(defValue)
-        v.name <- "DefaultVariableSet"
-        v.initialRange <- 0
-        v.expression <- "constant(\"" + defValue + "\")"
-        if not(vars.Any(fun v' -> v.name.Equals(v'.name))) then vars.Add(v)
-        builder.AppendStrings ["$"; v.name; "$"]
-        impl t builder
+		/// <summary>
+		///     Сочетание клавиш для шаблона
+		/// </summary>
+		public string Shortcut { get; private set; }
 
-      | Variable(name, value) :: t ->
-        let v = new TemplatesExportTemplateVariable()
-        v.name <- name
-        v.initialRange <- 0
-        v.expression <- value
-        vars.Add(v)
-        builder.AppendStrings ["$"; name; "$"]
-        impl t builder
+		/// <summary>
+		///     Текст шаблона
+		/// </summary>
+		public string Text { get; protected set; }
 
-      | Constant(name,text) :: t ->
-        if name <> "END" then begin
-          let v = new TemplatesExportTemplateVariable()
-          v.name <- name
-          v.initialRange <- 0
-          v.expression <- "constant(\"" + text + "\")"
-          if not(vars.Any(fun v' -> v.name.Equals(v'.name))) then vars.Add(v)
-        end
-        builder.AppendStrings ["$"; name; "$"]
-        impl t builder
-      
-      | Scope(content) :: t ->
-        builder.AppendString "{"
-        impl content builder
-        builder.AppendString "}"
-        impl t builder
+		/// <summary>
+		///     Область действия шаблона
+		/// </summary>
+		public string Context { get; protected set; }
 
-      | FixedType :: t ->
-        builder.AppendString "$typename$" // replaced later
-        impl t builder
-      
-      | [] -> ()
-    let sb = new StringBuilder()
-    impl expressions sb
-    sb.ToString();
+		/// <summary>
+		///     Сгенерировать XML-комментарии?
+		/// </summary>
+		public bool GenerateXmlComments { get; private set; }
 
-  // first, process structures
-  if renderCSharp then
-    for (s,exprs) in cSharpStructureTemplates do
-      let t = new TemplatesExportTemplate(shortcut=s)
-      let vars = new List<TemplatesExportTemplateVariable>()
-      t.description <- String.Empty
-      t.reformat <- "True"
-      t.uid <- newGuid()
-      t.text <- printExpressions exprs vars String.Empty
-
-      t.Context <- new TemplatesExportTemplateContext(CSharpContext = csContext)
-      t.Variables <- vars.ToArray()
-      templates.Add t
-    done
-
-  // now process members
-  if renderCSharp then
-    for (s,doc,exprs) in cSharpMemberTemplates do
-      // simple types; methods can be void
-      let types = (if Char.ToLower(s.Chars(0)) ='m' then ("", "void", "") :: csharpTypes else csharpTypes)
-      for (tk,tv,defValue) in types do
-        let t = new TemplatesExportTemplate(shortcut=(s+tk))
-        let vars = new List<TemplatesExportTemplateVariable>()
-        t.description <- printExpressions doc vars defValue
-        t.reformat <- "True"
-        t.shortenQualifiedReferences <- "True"
-        t.text <- (printExpressions exprs vars defValue)
-                  .Replace("$typename$", if String.IsNullOrEmpty(tv) then "void" else tv)
-        t.uid <- newGuid()
-        t.Context <- new TemplatesExportTemplateContext(CSharpContext = csContext)
-        t.Variables <- vars.ToArray()
-        templates.Add t
-      done
-
-      // generically specialized types
-      for (gk,gv,genArgCount) in dotNetGenericTypes do
-        match genArgCount with
-        | 1 ->
-          for (tk,tv,_) in csharpTypes do
-            let t0 = new TemplatesExportTemplate(shortcut=s+gk+tk)
-            let vars0 = new List<TemplatesExportTemplateVariable>()
-            let genericArgs = gv + "<" + tv + ">"
-            let defValue = "new " + genericArgs + "()"
-            t0.description <- (printExpressions doc vars0 defValue).Replace("$typename$", genericArgs)
-            t0.reformat <- "True"
-            t0.shortenQualifiedReferences <- "True"
-            t0.text <- (printExpressions exprs vars0 defValue).Replace("$typename$", genericArgs)
-            t0.uid <- newGuid()
-            t0.Context <- new TemplatesExportTemplateContext(CSharpContext = csContext)
-            t0.Variables <- vars0.ToArray()
-            templates.Add t0
-          done
-        | 2 -> // maybe this is not such a good idea because we get n^2 templates
-          for ((tk0,tv0,_),(tk1,tv1,_)) in pairs csharpTypes do
-            let t = new TemplatesExportTemplate(shortcut=s+gk+tk0+tk1)
-            let vars = List<TemplatesExportTemplateVariable>()
-            let genericArgs = gv + "<" + tv0 + "," + tv1 + ">"
-            let defValue = "new " + genericArgs + "()"
-            t.description <- (printExpressions doc vars defValue).Replace("$typename$", genericArgs)
-            t.reformat <- "True"
-            t.shortenQualifiedReferences <- "True"
-            t.text <- (printExpressions exprs vars defValue).Replace("$typename$", genericArgs)
-            t.uid <- newGuid()
-            t.Context <- new TemplatesExportTemplateContext(CSharpContext = csContext)
-            t.Variables <- vars.ToArray()
-            templates.Add t
-          done
-        | _ -> raise <| new Exception("We don't support this few/many args")
-      done
-    done
-
-  
-  te.Template <- templates.ToArray()
-
-			*/
-			const string FILENAME = "ReSharperMnemonics.xml";
-			File.Delete(FILENAME);
-			var xs = new XmlSerializer(te.GetType());
-			using (var fs = new FileStream(FILENAME, FileMode.Create, FileAccess.Write))
-			{
-				xs.Serialize(fs, te);
-			}
-			Console.WriteLine(te.Template.Length + "ReSharper templates exported");
+		/// <summary>
+		///     Конструктор для базового класса шаблонов
+		/// </summary>
+		/// <param name="defaultNameExpression">Имя по умолчанию</param>
+		/// <param name="shortcut">Сочетание клавиши для шаблона</param>
+		/// <param name="generateXmlComments">Сгенерировать XML комментарий?</param>
+		protected BaseTemplate(string defaultNameExpression, string shortcut,
+			bool generateXmlComments)
+		{
+			Uid = Guid.NewGuid().ToString().ToLower();
+			DefaultNameExpression = defaultNameExpression;
+			Shortcut = shortcut;
+			GenerateXmlComments = generateXmlComments;
 		}
 
-		static void Main()
+		/// <summary>
+		/// Производит окончательную сборку шаблона
+		/// </summary>
+		/// <param name="extrasVariables">Дополнительные переменные</param>
+		/// <returns>Возвращает один шаблон</returns>
+		protected string AssembleTemplate(string extrasVariables)
 		{
-			RenderResharper();
-			Thread.Sleep(1000);
+			var sb = new StringBuilder();
+			sb.Append("\n");
+			sb.Append(@"	<Template uid=""" + Uid + @""" shortcut=""" + Shortcut +
+				@""" description="""" text=""" + Text +
+				@""" reformat=""True"" shortenQualifiedReferences=""True"">");
+			sb.Append("\n");
+			sb.Append(@"		<Context>" + "\n");
+			sb.Append(@"			<CSharpContext context=""" + Context +
+						@""" minimumLanguageVersion=""2.0"" />" + "\n");
+			sb.Append(@"		</Context>" + "\n");
+			sb.Append(@"		<Variables>" + "\n");
+			sb.Append(@"			<Variable name=""DefaultName"" expression="""
+				+ DefaultNameExpression + @""" initialRange=""0"" />" + "\n");
+			sb.Append(extrasVariables);
+			sb.Append(@"		</Variables>" + "\n");
+			sb.Append(@"	</Template>" + "\n");
+			return sb.ToString();
+		}
+	}
+
+	/// <summary>
+	///     Базовый класс для всех переменных и методов
+	/// </summary>
+	public abstract class Member : BaseTemplate
+	{
+		/// <summary>
+		///     Область члена
+		/// </summary>
+		public enum Visibility : byte
+		{
+			Private,
+			Public,
+		}
+
+		/// <summary>
+		///     Член локальный?
+		/// </summary>
+		public bool IsLocal { get; private set; }
+
+		/// <summary>
+		///     Член статический?
+		/// </summary>
+		public bool IsStatic { get; private set; }
+
+		/// <summary>
+		///     Область видимости члена
+		/// </summary>
+		public Visibility Visible { get; private set; }
+
+		/// <summary>
+		///     Конструктор для шаблона члена
+		/// </summary>
+		/// <param name="defaultNameExpression">Имя по умолчанию</param>
+		/// <param name="shortcut">Сочетание клавиши для шаблона</param>
+		/// <param name="generateXmlComments">Сгенерировать XML комментарий?</param>
+		/// <param name="isLocal">Член локальный?</param>
+		/// <param name="isStatic">Член статический?</param>
+		/// <param name="visible">Область видимости члена</param>
+		protected Member(string defaultNameExpression, string shortcut,
+			bool generateXmlComments, bool isLocal, bool isStatic, Visibility visible)
+			: base(defaultNameExpression, shortcut, generateXmlComments)
+		{
+			IsLocal = isLocal;
+			IsStatic = isStatic;
+			Visible = visible;
+		}
+	}
+
+	/// <summary>
+	///     Базовый класс для переменных
+	/// </summary>
+	public abstract class Variable : Member
+	{
+		/// <summary>
+		///     Инициализировать?
+		/// </summary>
+		public bool IsVariabled { get; private set; }
+
+		/// <summary>
+		///     Использовать ключевое слово var при объявляении?
+		/// </summary>
+		public bool UseVar { get; private set; }
+
+		/// <summary>
+		///     значение по умолчанию при инициализации
+		/// </summary>
+		public string DefaultValue { get; private set; }
+
+		/// <summary>
+		///     Конструктор для шаблона переменной
+		/// </summary>
+		/// <param name="defaultNameExpression">Имя по умолчанию</param>
+		/// <param name="shortcut">Сочетание клавиши для шаблона</param>
+		/// <param name="generateXmlComments">Сгенерировать XML комментарий?</param>
+		/// <param name="isLocal">Член локальный?</param>
+		/// <param name="isStatic">Член статический?</param>
+		/// <param name="visible">Область видимости члена</param>
+		/// <param name="isVariabled">Инициализировать переменную?</param>
+		/// <param name="useVar">Использовать var при инициализации?</param>
+		/// <param name="defaultValue">Значение по умолчанию при инициализации</param>
+		protected Variable(string defaultNameExpression, string shortcut,
+			bool generateXmlComments, bool isLocal, bool isStatic, Visibility visible,
+			bool isVariabled, bool useVar, string defaultValue)
+			: base(defaultNameExpression, shortcut, generateXmlComments, isLocal, isStatic, visible)
+		{
+			IsVariabled = isVariabled;
+			UseVar = useVar;
+			DefaultValue = defaultValue;
+		}
+	}
+
+	/// <summary>
+	///     Шаблон для простой переменной
+	/// </summary>
+	public class SimpleVariable : Variable
+	{
+		/// <summary>
+		///     Тип переменной
+		/// </summary>
+		public string Type { get; private set; }
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="defaultNameExpression">Имя по умолчанию</param>
+		/// <param name="shortcut">Сочетание клавиши для шаблона</param>
+		/// <param name="generateXmlComments">Сгенерировать XML комментарий?</param>
+		/// <param name="isLocal">Член локальный?</param>
+		/// <param name="isStatic">Член статический?</param>
+		/// <param name="visible">Область видимости члена</param>
+		/// <param name="isVariabled">Инициализировать переменную?</param>
+		/// <param name="useVar">Использовать var при инициализации?</param>
+		/// <param name="defaultValue">Значение по умолчанию при инициализации</param>
+		/// <param name="type">Тип переменной</param>
+		private SimpleVariable(string defaultNameExpression, string shortcut,
+			bool generateXmlComments, bool isLocal, bool isStatic, Visibility visible,
+			bool isVariabled, bool useVar, string defaultValue, string type)
+			: base(defaultNameExpression, shortcut, generateXmlComments,
+				isLocal, isStatic, visible, isVariabled, useVar, defaultValue)
+		{
+			Type = type;
+		}
+
+		/// <summary>
+		///     Сгенерировать новый набор шаблонов для этой переменной
+		/// </summary>
+		/// <returns>Набор шаблонов</returns>
+		public static string GenerateTemplates(string shortcutSpec, string type,
+			string defaultValue,  bool useVar = false)
+		{
+			var templates = new StringBuilder();
+			return templates.ToString();
 		}
 	}
 }

@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{96BD982B-7F7E-4E7E-AC48-63BE7CC59391}</ProjectGuid>
+    <ProjectGuid>{72068729-5EC2-4809-8B3B-08CCAFEE9F3E}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Generator</RootNamespace>
@@ -47,11 +47,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CSharp.cs" />
-    <Compile Include="DotNet.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Type.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Mnemonics.XML\Mnemonics.XML.csproj">
