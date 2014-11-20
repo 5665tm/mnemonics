@@ -10,19 +10,19 @@ let csContext =
 
 let csharpTypes =
   [
-    ("b", "bool", "false", false)
+    ("b", "bool", "false")
     (*"c", "char", "0"*)
-    ("f", "float", "0.0f", false)
-    ("y", "byte", "0", false)
-    ("d", "double", "0.0", false)
-    ("i", "int", "0", false)
+    ("f", "float", "0.0f")
+    ("y", "byte", "0")
+    ("d", "double", "0.0")
+    ("i", "int", "0")
     (*"dec", "decimal", "0M"*)
-    ("s", "string", "\"\"", false)
+    ("s", "string", "\"\"")
     (*"l", "long", "0"*)
     (*"u", "uint", "0"*)
     (*"g", "System.Guid", "System.Guid.NewGuid()"*)
-    ("t", "Transform", "new Transform", true)
-    ("g", "GameObject", "new GameObject", true)
+    ("t", "Transform", "new Transform")
+    ("g", "GameObject", "new GameObject")
     (*"m", "Material", "new Material"*)
     (*"a", "AudioClip", "new AudioClip"*)
     (*"sb", "System.Text.StringBuilder", "new System.Text.StringBuilder"*)
@@ -293,7 +293,9 @@ let cSharpMemberTemplates =
         FixedType
         space
         Constant ("methodname", "MyMethod")
-        Text "()"
+        Text "("
+        Constant("arguments", "")
+        Text ")"
         Scope [
           endConstant
         ]
@@ -310,7 +312,9 @@ let cSharpMemberTemplates =
         FixedType
         space
         Constant ("methodname", "MyMethod")
-        Text "()"
+        Text "("
+        Constant("arguments", "")
+        Text ")"
         Scope [
           endConstant
         ]
@@ -328,7 +332,9 @@ let cSharpMemberTemplates =
         FixedType
         space
         Constant ("methodname", "MyMethod")
-        Text "()"
+        Text "("
+        Constant("arguments", "")
+        Text ")"
         Scope [
           endConstant
         ]
@@ -345,7 +351,9 @@ let cSharpMemberTemplates =
         FixedType
         space
         Constant ("methodname", "MyMethod")
-        Text "()"
+        Text "("
+        Constant("arguments", "")
+        Text ")"
         Scope [
           endConstant
         ]
