@@ -1,6 +1,10 @@
-﻿// Last Change: 2014 11 21 16:18
+﻿// Last Change: 2014 11 21 20:37
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace ExlainSoftware
@@ -10,15 +14,22 @@ namespace ExlainSoftware
 		private static void Render()
 		{
 			var sb = new StringBuilder();
-			sb.Append(@"<wpf:ResourceDictionary xml:space=""preserve"" xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml"" xmlns:s=""clr-namespace:System;assembly=mscorlib"" xmlns:ss=""urn:shemas-jetbrains-com:settings-storage-xaml"" xmlns:wpf=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""> ");
+			sb.Append(@"<wpf:ResourceDictionary xml:space=""preserve"" xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml"" xmlns:s=""clr-namespace:System;assembly=mscorlib"" xmlns:ss=""urn:shemas-jetbrains-com:settings-storage-xaml"" xmlns:wpf=""http://schemas.microsoft.com/winfx/2006/xaml/presentation""> "
+				+ "\n");
 			sb.Append(SimpleVariable.GenerateTemplates("i", "int", "0", false, "counter", "counter"));
+			sb.Append(SimpleVariable.GenerateTemplates("f", "float", "0f", false, "distance", "distance"));
+			sb.Append(SimpleVariable.GenerateTemplates("d", "double", "0d", false, "distance", "distance"));
+			sb.Append(SimpleVariable.GenerateTemplates("b", "bool", "false", false, "flag", "flag"));
+			sb.Append(SimpleVariable.GenerateTemplates("t", "Transform", "GetComponent<Transform>()", false, "transform", "transform"));
 			sb.Append(@"</wpf:ResourceDictionary>");
+			var fs = new FileStream("export.DotSettings", FileMode.Create);
+			var sw = new StreamWriter(fs);
+			sw.Write(sb.ToString());
+			sw.Flush();
+			fs.Flush();
 			Console.WriteLine(sb.ToString());
-			//			var fs = new FileStream("export.DotSetting", FileMode.Create);
-			//			var sw = new StreamWriter(fs);
-			//			sw.Write(sb.ToString());
-			//			sw.Close();
-			//			fs.Close();
+			Console.WriteLine(BaseTemplate.Counter);
+			Process.Start(Environment.CurrentDirectory);
 		}
 
 		private static void Main()
@@ -33,6 +44,8 @@ namespace ExlainSoftware
 	/// </summary>
 	public abstract class BaseTemplate
 	{
+		public static int Counter;
+		
 		/// <summary>
 		///     Идентификатор шаблона
 		/// </summary>
@@ -41,7 +54,7 @@ namespace ExlainSoftware
 		/// <summary>
 		///     Выражение для вычисления имени по умолчанию
 		/// </summary>
-		public string DefaultNameExpression { get; protected set; }
+		public string DefaultName { get; protected set; }
 
 		/// <summary>
 		///     Сочетание клавиш для шаблона
@@ -54,11 +67,6 @@ namespace ExlainSoftware
 		public string Text { get; protected set; }
 
 		/// <summary>
-		///     Область действия шаблона
-		/// </summary>
-		public string Context { get; protected set; }
-
-		/// <summary>
 		///     Сгенерировать XML-комментарии?
 		/// </summary>
 		public bool GenerateXmlComments { get; private set; }
@@ -66,14 +74,14 @@ namespace ExlainSoftware
 		/// <summary>
 		///     Конструктор для базового класса шаблонов
 		/// </summary>
-		/// <param name="defaultNameExpression">Имя по умолчанию</param>
+		/// <param name="defaultName">Имя по умолчанию</param>
 		/// <param name="shortcut">Сочетание клавиши для шаблона</param>
 		/// <param name="generateXmlComments">Сгенерировать XML комментарий?</param>
-		protected BaseTemplate(string defaultNameExpression, string shortcut,
+		protected BaseTemplate(string defaultName, string shortcut,
 			bool generateXmlComments)
 		{
 			Uid = GetGuid();
-			DefaultNameExpression = defaultNameExpression;
+			DefaultName = defaultName;
 			Shortcut = shortcut;
 			GenerateXmlComments = generateXmlComments;
 		}
@@ -91,19 +99,15 @@ namespace ExlainSoftware
 		///     Возвращает линию с указанными параметрами
 		/// </summary>
 		/// <param name="typeValue">Тип параметра</param>
-		/// <param name="uid">Уникальный номер</param>
 		/// <param name="end">Концовка адреса</param>
 		/// <param name="typeKey">Тип ключа</param>
 		/// <param name="value">Значение параметра</param>
 		/// <returns>Строка</returns>
-		public string GetLine(TypeValue typeValue, string end, TypeKey typeKey, string value, string uid = null)
+		public string GetLine(TypeValue typeValue, string end, TypeKey typeKey, string value)
 		{
-			if (uid == null)
-			{
-				uid = Uid;
-			}
-			return "\t<s:" + typeValue + " x:Key=\"/Default/PatternsAndTemplates/LiveTemplates/Template/="
-				+ uid + "/" + end + "/@" + typeKey + "\">" + value + "</s:" + typeValue + ">\n";
+			return "\t<s:" + typeValue +
+				" x:Key=\"/Default/PatternsAndTemplates/LiveTemplates/Template/=" + Uid + "/" + end
+				+ (end == null ? "@" : "/@") + typeKey + "\">" + value + "</s:" + typeValue + ">\n";
 		}
 
 		/// <summary>
@@ -119,28 +123,97 @@ namespace ExlainSoftware
 		public enum TypeValue
 		{
 			Int64,
-			Boollean,
+			Boolean,
 			String
+		}
+
+		public enum TypeScope
+		{
+			InCSharpTypeMember,
+			InCSharpTypeAndNamespace,
+			InCSharpStatement
+		}
+
+		/// <summary>
+		///     Возвращает констатное выражение поля по умолчанию
+		/// </summary>
+		/// <param name="parameter">Значение константы</param>
+		/// <returns>Сгенерированное выражение</returns>
+		protected string GetExpressionConstant(string parameter)
+		{
+			return (@"constant(&quot;" + parameter + "&quot;)").Replace("<", "&lt;").Replace(">", "&gt;");
+		}
+
+		public class Field
+		{
+			public readonly string Name;
+			public readonly string Expression;
+
+			public Field(string name, string expression)
+			{
+				Name = name;
+				Expression = expression;
+			}
 		}
 
 		/// <summary>
 		///     Производит окончательную сборку шаблона
 		/// </summary>
-		/// <param name="extrasVariables">Дополнительные переменные</param>
 		/// <returns>Возвращает один шаблон</returns>
-		protected string AssembleTemplate(string extrasVariables)
+		protected string AssembleTemplate(IEnumerable<TypeScope> scopes, List<Field> fields)
 		{
+			Counter++;
 			var sb = new StringBuilder();
-			sb.Append(GetLine(TypeValue.Boollean, null, TypeKey.KeyIndexDefined, "True") +
+
+			// заполняем основную информацию
+			sb.Append(GetLine(TypeValue.Boolean, null, TypeKey.KeyIndexDefined, "True") +
 				GetLine(TypeValue.String, "Shortcut", TypeKey.EntryValue, Shortcut) +
 				GetLine(TypeValue.String, "Description", TypeKey.EntryValue, "") +
-				GetLine(TypeValue.String, "Text", TypeKey.EntryValue, Text.Replace("\n", "&#xD;")) +
-				GetLine(TypeValue.Boollean, "Reformat", TypeKey.EntryValue, "True") +
-				GetLine(TypeValue.Boollean, "ShortenQualifiedReferences", TypeKey.EntryValue, "True") +
+				GetLine(TypeValue.String, "Text", TypeKey.EntryValue, Text
+					.Replace("\r", "").Replace("\n", "&#xD;\n").Replace("<", "&lt;").Replace(">", "&gt;")) +
+				GetLine(TypeValue.Boolean, "Reformat", TypeKey.EntryValue, "True") +
+				GetLine(TypeValue.Boolean, "ShortenQualifiedReferences", TypeKey.EntryValue, "True") +
 				GetLine(TypeValue.String, "Categories/=5665tm_0020Snippets", TypeKey.EntryIndexedValue, "5665tm Snippets") +
-				GetLine(TypeValue.Boollean, "Applicability/=Live", TypeKey.EntryIndexedValue, "True")
+				GetLine(TypeValue.Boolean, "Applicability/=Live", TypeKey.EntryIndexedValue, "True")
 				);
-			return sb.ToString();
+
+			// добавляем области где работает шаблон
+			var addScope = new Action<TypeScope, string>((g, codeGuid) =>
+				sb.Append(GetLine(TypeValue.Boolean, "Scope/=" + codeGuid,
+					TypeKey.KeyIndexDefined, "True") +
+					GetLine(TypeValue.String, "Scope/=" + codeGuid + "/Type",
+						TypeKey.EntryValue, g.ToString()) +
+					GetLine(TypeValue.String, "Scope/=" + codeGuid + "/CustomProperties/=minimumLanguageVersion",
+						TypeKey.EntryIndexedValue, "2.0"))
+				);
+			foreach (var scope in scopes)
+			{
+				switch (scope)
+				{
+					case TypeScope.InCSharpTypeAndNamespace:
+						addScope(scope, "558F05AA0DE96347816FF785232CFB2A");
+						break;
+					case TypeScope.InCSharpTypeMember:
+						addScope(scope, "B68999B9D6B43E47A02B22C12A54C3CC");
+						break;
+					case TypeScope.InCSharpStatement:
+						addScope(scope, "2C285F182AC98D44B0B4F29D4D2149EC");
+						break;
+				}
+			}
+
+			// добавляем информацию о всех переменных
+			for (int i = 0; i < fields.Count(); i++)
+			{
+				sb.Append(GetLine(
+					TypeValue.Boolean, "Field/=" + fields[i].Name, TypeKey.KeyIndexDefined, "True"));
+				sb.Append(GetLine(
+					TypeValue.String, "Field/=" + fields[i].Name + "/Expression", TypeKey.EntryValue, fields[i].Expression));
+				sb.Append(GetLine(
+					TypeValue.Int64, "Field/=" + fields[i].Name + "/Order", TypeKey.EntryValue, Convert.ToString(i)));
+			}
+
+			return sb + "\n";
 		}
 	}
 
@@ -176,15 +249,15 @@ namespace ExlainSoftware
 		/// <summary>
 		///     Конструктор для шаблона члена
 		/// </summary>
-		/// <param name="defaultNameExpression">Имя по умолчанию</param>
+		/// <param name="defaultName">Имя по умолчанию</param>
 		/// <param name="shortcut">Сочетание клавиши для шаблона</param>
 		/// <param name="generateXmlComments">Сгенерировать XML комментарий?</param>
 		/// <param name="isLocal">Член локальный?</param>
 		/// <param name="isStatic">Член статический?</param>
 		/// <param name="visible">Область видимости члена</param>
-		protected Member(string defaultNameExpression, string shortcut,
+		protected Member(string defaultName, string shortcut,
 			bool generateXmlComments, bool isLocal, bool isStatic, Visibility visible)
-			: base(defaultNameExpression, shortcut, generateXmlComments)
+			: base(defaultName, shortcut, generateXmlComments)
 		{
 			IsLocal = isLocal;
 			IsStatic = isStatic;
@@ -215,7 +288,7 @@ namespace ExlainSoftware
 		/// <summary>
 		///     Конструктор для шаблона переменной
 		/// </summary>
-		/// <param name="defaultNameExpression">Имя по умолчанию</param>
+		/// <param name="defaultName">Имя по умолчанию</param>
 		/// <param name="shortcut">Сочетание клавиши для шаблона</param>
 		/// <param name="generateXmlComments">Сгенерировать XML комментарий?</param>
 		/// <param name="isLocal">Член локальный?</param>
@@ -224,10 +297,10 @@ namespace ExlainSoftware
 		/// <param name="isVariabled">Инициализировать переменную?</param>
 		/// <param name="useVar">Использовать var при инициализации?</param>
 		/// <param name="defaultValue">Значение по умолчанию при инициализации</param>
-		protected Variable(string defaultNameExpression, string shortcut,
+		protected Variable(string defaultName, string shortcut,
 			bool generateXmlComments, bool isLocal, bool isStatic, Visibility visible,
 			bool isVariabled, bool useVar, string defaultValue)
-			: base(defaultNameExpression, shortcut, generateXmlComments, isLocal, isStatic, visible)
+			: base(defaultName, shortcut, generateXmlComments, isLocal, isStatic, visible)
 		{
 			IsVariabled = isVariabled;
 			UseVar = useVar;
@@ -247,7 +320,7 @@ namespace ExlainSoftware
 
 		/// <summary>
 		/// </summary>
-		/// <param name="defaultNameExpression">Имя по умолчанию</param>
+		/// <param name="defaultName">Имя по умолчанию</param>
 		/// <param name="shortcut">Сочетание клавиши для шаблона</param>
 		/// <param name="generateXmlComments">Сгенерировать XML комментарий?</param>
 		/// <param name="isLocal">Член локальный?</param>
@@ -257,10 +330,10 @@ namespace ExlainSoftware
 		/// <param name="useVar">Использовать var при инициализации?</param>
 		/// <param name="defaultValue">Значение по умолчанию при инициализации</param>
 		/// <param name="type">Тип переменной</param>
-		private SimpleVariable(string defaultNameExpression, string shortcut,
+		private SimpleVariable(string defaultName, string shortcut,
 			bool generateXmlComments, bool isLocal, bool isStatic, Visibility visible,
 			bool isVariabled, bool useVar, string defaultValue, string type)
-			: base(defaultNameExpression, shortcut, generateXmlComments,
+			: base(defaultName, shortcut, generateXmlComments,
 				isLocal, isStatic, visible, isVariabled, useVar, defaultValue)
 		{
 			Type = type;
@@ -268,10 +341,9 @@ namespace ExlainSoftware
 
 		private string GetTemplate()
 		{
-			string extrasVariables = null;
-
+			var scopes = new List<TypeScope>();
+			var fields = new List<Field>();
 			string template = Type + " $DefaultName$";
-			DefaultNameExpression = @"constant(&quot;" + DefaultNameExpression + "&quot;)";
 
 			if (!IsVariabled)
 			{
@@ -280,12 +352,10 @@ namespace ExlainSoftware
 			else
 			{
 				template += " = $DefaultValue$";
-				extrasVariables = @"			<Variable name=""DefaultValue"" expression=""constant(&quot;"
-					+ DefaultValue + @"&quot;)"" initialRange=""0"" />" + "\n";
 			}
 			if (IsLocal)
 			{
-				Context = "Expression";
+				scopes.Add(TypeScope.InCSharpStatement);
 				if (UseVar && IsVariabled)
 				{
 					template = template.Replace(Type, "var");
@@ -293,15 +363,17 @@ namespace ExlainSoftware
 			}
 			else
 			{
-				Context = "TypeMember";
+				scopes.Add(TypeScope.InCSharpTypeMember);
 				if (Visible == Visibility.Public)
 				{
 					Shortcut = "p" + Shortcut;
 					template = "public " + template;
+					DefaultName = DefaultName.Substring(0, 1).ToUpperInvariant() + DefaultName.Substring(1, DefaultName.Length - 1);
 				}
-				else
+				else if (Visible == Visibility.Private)
 				{
 					template = "private " + template;
+					template = template.Replace("$DefaultName$", "_$DefaultName$");
 				}
 				if (IsStatic)
 				{
@@ -310,23 +382,26 @@ namespace ExlainSoftware
 				}
 				if (GenerateXmlComments)
 				{
-					template = @"
-		/// <summary>
-		///     $END$
+					template = @"/// <summary>
+		///     $XMLCOM$
 		/// </summary>" + "\n" + template;
+					fields.Add(new Field("XMLCOM", GetExpressionConstant("some comment")));
 					Shortcut = Shortcut + "x";
 				}
 			}
-			Text = template + ";";
-			return AssembleTemplate(extrasVariables);
+			fields.Add(new Field("DefaultName", GetExpressionConstant(DefaultName)));
+			fields.Add(new Field("DefaultValue", GetExpressionConstant(DefaultValue)));
+			Text = template + ";\n$END$";
+			return AssembleTemplate(scopes, fields);
 		}
-
+		
 		/// <summary>
 		///     Сгенерировать новый набор шаблонов для этой переменной
 		/// </summary>
 		/// <returns>Набор шаблонов</returns>
 		public static string GenerateTemplates(string shortcutSpec, string type,
-			string defaultValue, bool useVar = false, string defaultNameLocal = "field", string defaultNameGlobal = "field")
+			string defaultValue, bool useVar = false, string defaultNameLocal = "field",
+			string defaultNameGlobal = "field")
 		{
 			var templates = new StringBuilder();
 			string defaultName = null;
