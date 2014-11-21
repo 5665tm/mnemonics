@@ -1,4 +1,4 @@
-﻿// Last Change: 2014 11 21 12:55 AM
+﻿// Last Change: 2014 11 21 8:52 AM
 
 using System;
 using System.Text;
@@ -31,7 +31,7 @@ namespace ExlainSoftware
 		public string Uid { get; private set; }
 
 		/// <summary>
-		/// Выражение для вычисления имени по умолчанию
+		///     Выражение для вычисления имени по умолчанию
 		/// </summary>
 		public string DefaultNameExpression { get; private set; }
 
@@ -71,7 +71,7 @@ namespace ExlainSoftware
 		}
 
 		/// <summary>
-		/// Производит окончательную сборку шаблона
+		///     Производит окончательную сборку шаблона
 		/// </summary>
 		/// <param name="extrasVariables">Дополнительные переменные</param>
 		/// <returns>Возвращает один шаблон</returns>
@@ -85,7 +85,7 @@ namespace ExlainSoftware
 			sb.Append("\n");
 			sb.Append(@"		<Context>" + "\n");
 			sb.Append(@"			<CSharpContext context=""" + Context +
-						@""" minimumLanguageVersion=""2.0"" />" + "\n");
+				@""" minimumLanguageVersion=""2.0"" />" + "\n");
 			sb.Append(@"		</Context>" + "\n");
 			sb.Append(@"		<Variables>" + "\n");
 			sb.Append(@"			<Variable name=""DefaultName"" expression="""
@@ -199,7 +199,6 @@ namespace ExlainSoftware
 		public string Type { get; private set; }
 
 		/// <summary>
-		/// 
 		/// </summary>
 		/// <param name="defaultNameExpression">Имя по умолчанию</param>
 		/// <param name="shortcut">Сочетание клавиши для шаблона</param>
@@ -220,14 +219,61 @@ namespace ExlainSoftware
 			Type = type;
 		}
 
+		private string GetTemplate()
+		{
+			return null;
+		}
+
 		/// <summary>
 		///     Сгенерировать новый набор шаблонов для этой переменной
 		/// </summary>
 		/// <returns>Набор шаблонов</returns>
 		public static string GenerateTemplates(string shortcutSpec, string type,
-			string defaultValue,  bool useVar = false)
+			string defaultValue, bool useVar = false)
 		{
 			var templates = new StringBuilder();
+			bool isLocal = false;
+			bool isStatic =false;
+			bool generateXmlComments = false;
+			bool visible = false;
+			bool isVariabled =false;
+//			var construct = new Func<string>(() =>
+//			{
+//				return new SimpleVariable(
+//					
+//					);
+//			});
+			for (int variabledFlag = 0; variabledFlag < 2; variabledFlag++)
+			{
+				isVariabled = variabledFlag == 1;
+
+				for (int local = 0; local < 2; local++)
+				{
+					if (local == 0)
+					{
+						isLocal = false;
+
+						for (int staticflag = 0; staticflag < 2; staticflag++)
+						{
+							isStatic = staticflag == 1;
+
+							for (int generateXmlFlag = 0; generateXmlFlag < 2; generateXmlFlag++)
+							{
+								generateXmlComments = generateXmlFlag == 1;
+
+								for (int visibleFlag = 0; visibleFlag < 2; visibleFlag++)
+								{
+									visible = visibleFlag == 1;
+								}
+							}
+						}
+					}
+					else
+					{
+						isLocal = true;
+					}
+				}
+			}
 			return templates.ToString();
 		}
 	}
